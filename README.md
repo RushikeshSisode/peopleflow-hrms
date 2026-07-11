@@ -302,7 +302,7 @@ After startup, verify the health endpoint and Swagger UI in the browser. An auto
 
 The production deployment uses one Render Web Service. Express serves both the API and the compiled React application, which keeps authentication cookies and `/api` requests on the same origin.
 
-The included `render.yaml` configures the build, start command, health check, Node.js version, and non-secret environment defaults.
+The included `render.yaml` configures Render's free web-service plan, build, start command, health check, Node.js version, and non-secret environment defaults.
 
 ### Render
 

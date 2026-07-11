@@ -1,6 +1,7 @@
 services:
   - type: web
     runtime: node
+    plan: free
     name: peopleflow-hrms
     buildCommand: "npm ci --prefix server && npm ci --prefix client && npm run build --prefix client"
     startCommand: "npm start --prefix server"
