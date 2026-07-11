@@ -1,0 +1,533 @@
+MERN Stack Interview Assignment – HRMS (Human Resource Management System) 
+Assignment Overview 
+You are required to develop a simplified but production-oriented HRMS (Human Resource 
+Management System) using the MERN Stack (MongoDB, Express.js, React.js, Node.js). 
+
+This assignment is designed to evaluate your: 
+
+• System design and architecture skills  
+• Backend API development  
+• Database design  
+• Authentication & Authorization  
+• Business logic implementation  
+• React frontend development  
+• Code quality and maintainability  
+• Problem-solving ability  
+
+ 
+
+Duration 
+3 Days (72 Hours) 
+
+Expected effort: 15–25 hours 
+
+ 
+
+Technology Stack (Mandatory) 
+Frontend 
+
+• React.js  
+• React Router  
+• Redux Toolkit / Context API  
+• Material UI / Ant Design / Tailwind CSS  
+
+Backend 
+
+• Node.js  
+• Express.js  
+
+Database 
+
+• MongoDB /MYSQL 
+
+
+
+Authentication 
+
+• JWT Authentication  
+
+Version Control 
+
+• Git  
+
+Submission 
+
+• GitHub Repository with deployment (on any platform) 
+• README with setup instructions  
+• Postman Collection / Swagger Documentation  
+
+ 
+
+User Roles 
+There will be 2 roles: 
+
+1. Admin 
+2. Employee 
+ 
+
+Authentication Module 
+Features 
+Employee Login 
+
+• Email  
+• Password  
+
+Admin Login 
+
+• Email  
+• Password  
+
+Requirements 
+
+• JWT Authentication  
+• Password hashing  
+• Role-based authorization  
+
+ 
+
+
+
+Employee Management (Admin) 
+Admin should be able to: 
+
+Create Employee 
+Fields: 
+
+• Employee ID (Auto Generated)  
+• Full Name  
+• Email  
+• Phone Number  
+• Date of Joining  
+• Designation  
+• Monthly Salary  
+• Employment Type  
+
+o Full Time  
+o Intern  
+o Contractual  
+
+• Reporting Manager (Optional)  
+• Status  
+
+o Active  
+o Inactive  
+
+Employee Listing 
+Admin can: 
+
+• View all employees  
+• Search employee  
+• Filter employee  
+• View employee profile  
+
+ 
+
+Employment Type & Leave Plan Management 
+Admin should be able to create employment categories. 
+
+Examples: 
+
+Full Time 
+
+Leave Type Annual Days 
+Casual Leave 12 
+
+
+
+Sick Leave 12 
+Paid Leave 18 
+
+Intern 
+Leave Type Annual Days 
+
+Sick Leave 6 
+Paid Leave 0 
+
+Contractual 
+Leave Type Annual Days 
+
+Paid Leave 6 
+Unpaid Leave Unlimited 
+
+ 
+
+Requirements 
+Admin should be able to: 
+
+• Create Employment Type  
+• Assign Leave Policy  
+• Update Leave Policy  
+• View Leave Policy  
+
+Employee should automatically inherit leave policy based on employment type. 
+
+ 
+
+Attendance Management 
+Employee Attendance 
+Employees can: 
+
+Punch In 
+Store: 
+
+• Date  
+• Time  
+
+Punch Out 
+Store: 
+
+• Date  
+• Time  
+
+
+
+Multiple Punches Per Day 
+Example: 
+
+Action Time 
+ In 09:00 
+Out 01:00 
+In 01:45 
+Out 06:00 
+
+ 
+
+Attendance Calculation 
+System should calculate: 
+
+Total Working Hours 
+Example: 
+
+09:00-01:00 = 4 Hours 
+01:45-06:00 = 4.25 Hours 
+ 
+Total Work = 8.25 Hours 
+
+Total Break Duration 
+Example: 
+
+01:00 PM - 01:45 PM 
+ 
+Break Duration = 45 Minutes 
+
+Display on employee dashboard: 
+
+• Today's working hours  
+• Today's break duration  
+
+ 
+
+Attendance Dashboard Calendar 
+Employee dashboard should contain monthly calendar. 
+
+Color Codes 
+
+Status Color 
+Present Green 
+Absent Red 
+
+
+
+Paid Leave Blue 
+Unpaid Leave Orange 
+Holiday Purple 
+Half Day Yellow 
+
+Calendar Requirements 
+
+Clicking any date should show: 
+
+• Attendance details  
+• Leave details  
+• Holiday details  
+
+ 
+
+Leave Management 
+Employee 
+Employee can apply for: 
+
+Full Day Leave 
+Example: 
+
+• 15 Aug 2026  
+
+Half Day Leave 
+Example: 
+
+• 16 Aug 2026 (First Half)  
+• 16 Aug 2026 (Second Half)  
+
+Multi-Day Leave 
+Example: 
+
+• 16 Aug 2026 → 20 Aug 2026  
+ 
+
+Leave Application Form 
+Fields: 
+
+• Leave Type  
+• From Date  
+• To Date  
+• Half Day (Yes/No)  
+
+
+
+• Reason  
+ 
+
+Leave Workflow 
+Status: 
+
+• Pending  
+• Approved  
+• Rejected  
+
+ 
+
+Leave Balance Display 
+Employee dashboard should show: 
+
+Example 
+Paid Leave: 
+Available: 10 
+Used: 2 
+Remaining: 8 
+ 
+Sick Leave: 
+Available: 12 
+Used: 4 
+Remaining: 8 
+
+Balance should automatically update after approval. 
+
+ 
+
+Holiday Management 
+Admin should be able to: 
+
+Add Annual Holidays 
+
+Fields: 
+
+• Holiday Name  
+• Date  
+• Description  
+
+Examples: 
+
+• Republic Day  
+
+
+
+• Independence Day  
+• Diwali  
+• Christmas  
+
+ 
+
+Employee Dashboard 
+All holidays should appear in calendar view. 
+
+ 
+
+Attendance Administration 
+Admin should be able to: 
+
+View Attendance 
+Filters: 
+
+• Employee  
+• Date Range  
+• Month  
+
+Attendance Reports 
+Show: 
+
+• Total Working Days  
+• Present Days  
+• Absent Days  
+• Late Marks  
+• Leave Days  
+
+ 
+
+Late Mark Logic 
+Rule 
+Office Start Time = 09:30 AM 
+
+If employee punches in after 09:30 AM: 
+
+Late Mark +1 
+
+Monthly Rule 
+Every: 
+
+
+
+3 Late Marks = 0.5 Day Deduction 
+
+Example: 
+
+Late Marks = 7 
+ 
+3 = Half Day 
+3 = Half Day 
+ 
+Remaining = 1 
+ 
+Total Deduction = 1 Day 
+
+ 
+
+Leave Adjustment Rule 
+Before salary deduction: 
+
+System should check: 
+
+Available Paid Leave? 
+
+If Available 
+Deduct from paid leave balance. 
+
+Else 
+Salary deduction should apply. 
+
+ 
+
+Payroll Module 
+Monthly Payroll Processing 
+Admin should be able to run payroll for a selected month. 
+
+Example: 
+
+July 2026 
+
+ 
+
+Payroll Calculation 
+Monthly Salary: 
+
+
+
+₹50,000 
+
+Working Days: 
+
+22 
+
+Per Day Salary: 
+
+50000 / 22 = 2272.72 
+
+ 
+
+Payroll Deduction Sources 
+Unpaid Leave 
+
+Deduct amount. 
+
+Absent Days 
+Deduct amount. 
+
+Late Mark Conversion 
+
+Apply deduction according to rule. 
+
+Half Day 
+
+0.5 day deduction. 
+
+Payroll Output 
+Admin should see: 
+
+• Gross Salary  
+• Total Deduction  
+• Paid Leave Used  
+• Unpaid Leave  
+• Absent Days  
+• Late Mark Deductions  
+• Net Salary  
+
+ 
+
+Salary Slip 
+After payroll is processed: 
+
+Employee should be able to: 
+
+
+
+View Salary Slip 
+
+Download Salary Slip (PDF) 
+
+Slip should contain: 
+
+• Company Name  
+• Employee Details  
+• Payroll Month  
+• Gross Salary  
+• Deductions  
+• Net Salary  
+
+ 
+
+Suggested Database Collections 
+Candidate is expected to design suitable schemas, but typical collections may include: 
+
+• Users  
+• Roles  
+• EmploymentTypes  
+• LeavePolicies  
+• LeaveRequests  
+• AttendanceLogs  
+• Holidays  
+• Payrolls  
+• SalarySlips  
+
+ 
+
+Expected APIs 
+Candidate should design REST APIs covering: 
+
+Authentication 
+
+• Login  
+• Logout  
+
+Employees 
+
+• CRUD  
+
+Attendance 
+
+• Punch In  
+
+
+
+• Punch Out  
+• Attendance History  
+
+Leave 
+
+• Apply Leave  
+• Approve Leave  
+• Reject Leave  
+• Leave Balance  
+
+Holiday 
+
+• CRUD  
+
+Payroll 
+
+• Run Payroll  
+• Payroll History  
+• Salary Slip Download 
+
+ 
+
+Timeline: Submission must be completed within 3 calendar days (72 hours) from the time the 
+assignment is shared.
