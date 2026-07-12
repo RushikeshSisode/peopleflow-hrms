@@ -513,9 +513,6 @@ function AdminDashboard({ panel, error }) {
           </div>
         </dl>
 
-        <div className="mt-8 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-sm text-emerald-100">
-          Refresh token stays in an HTTP-only cookie. The access token is sent in the `Authorization` header for protected API calls.
-        </div>
       </aside>
     </div>
   )
