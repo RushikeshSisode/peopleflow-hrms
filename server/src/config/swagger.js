@@ -303,6 +303,18 @@ const swaggerDocument = {
           ...commonErrors,
         },
       },
+      delete: {
+        tags: ['Employees'],
+        summary: 'Delete employee and related records (Admin)',
+        description:
+          'Deletes the employee profile, linked user account, attendance logs, leave balances, leave requests, payroll records, and clears any subordinate reporting-manager references.',
+        security: adminSecurity,
+        parameters: [idParameter('id', 'Employee record ID.')],
+        responses: {
+          200: dataResponse('Employee deleted.', { $ref: '#/components/schemas/DeletedEmployee' }),
+          ...commonErrors,
+        },
+      },
     },
     '/employees/{id}/status': {
       patch: {
@@ -345,8 +357,10 @@ const swaggerDocument = {
             description: 'Seasonal workforce',
             isActive: true,
             leaveRules: [
-              { leaveType: 'Paid Leave', annualDays: 6, isUnlimited: false },
-              { leaveType: 'Unpaid Leave', annualDays: 0, isUnlimited: true },
+              { leaveType: 'Casual Leave', annualDays: 4 },
+              { leaveType: 'Sick Leave', annualDays: 6 },
+              { leaveType: 'Paid Leave', annualDays: 8 },
+              { leaveType: 'Unpaid Leave', annualDays: 0 },
             ],
           },
         ),
@@ -405,7 +419,14 @@ const swaggerDocument = {
               leaveRules: { type: 'array', items: { $ref: '#/components/schemas/LeaveRule' } },
             },
           },
-          { leaveRules: [{ leaveType: 'Paid Leave', annualDays: 12, isUnlimited: false }] },
+          {
+            leaveRules: [
+              { leaveType: 'Casual Leave', annualDays: 12 },
+              { leaveType: 'Sick Leave', annualDays: 12 },
+              { leaveType: 'Paid Leave', annualDays: 18 },
+              { leaveType: 'Unpaid Leave', annualDays: 0 },
+            ],
+          },
         ),
         responses: {
           200: dataResponse('Leave policy updated.', { $ref: '#/components/schemas/EmploymentType' }),
@@ -441,6 +462,8 @@ const swaggerDocument = {
         tags: ['Leave'],
         summary: 'Apply for leave (Employee)',
         security: employeeSecurity,
+        description:
+          'Employees can currently apply for past, current, or future dates within the same calendar year, provided the request does not overlap another pending or approved request.',
         requestBody: requestBody(
           { $ref: '#/components/schemas/ApplyLeaveRequest' },
           {
@@ -674,7 +697,8 @@ const swaggerDocument = {
       post: {
         tags: ['Payroll'],
         summary: 'Process payroll (Admin)',
-        description: 'Processes all eligible employees, or one employee when employeeId is supplied. Re-running updates existing records for the month.',
+        description:
+          'Processes all eligible employees, or one employee when employeeId is supplied. Re-running updates existing records for the month. Salary deduction comes from unpaid leave, absent days, late-mark conversion, and unpaid half-days. Only the Paid Leave bucket is used for automatic absence and late-mark adjustment.',
         security: adminSecurity,
         requestBody: requestBody(
           { $ref: '#/components/schemas/RunPayrollRequest' },
@@ -905,11 +929,21 @@ const swaggerDocument = {
       },
       LeaveRule: {
         type: 'object',
-        required: ['leaveType'],
+        required: ['leaveType', 'annualDays'],
         properties: {
-          leaveType: { type: 'string', example: 'Paid Leave' },
+          leaveType: {
+            type: 'string',
+            enum: ['Casual Leave', 'Sick Leave', 'Paid Leave', 'Unpaid Leave'],
+            example: 'Paid Leave',
+          },
           annualDays: { type: 'number', minimum: 0, example: 12 },
-          isUnlimited: { type: 'boolean', default: false },
+          isUnlimited: {
+            type: 'boolean',
+            enum: [false],
+            default: false,
+            description:
+              'Retained for compatibility. Current leave policies always use finite annual day counts.',
+          },
         },
       },
       LeavePolicy: {
@@ -950,7 +984,12 @@ const swaggerDocument = {
           name: { type: 'string' },
           description: { type: 'string' },
           isActive: { type: 'boolean', default: true },
-          leaveRules: { type: 'array', items: { $ref: '#/components/schemas/LeaveRule' } },
+          leaveRules: {
+            type: 'array',
+            description:
+              'Provide annual day counts for the four fixed leave buckets. Missing buckets default to 0.',
+            items: { $ref: '#/components/schemas/LeaveRule' },
+          },
         },
       },
       UpdateEmploymentTypeRequest: {
@@ -964,11 +1003,14 @@ const swaggerDocument = {
       LeaveBalanceItem: {
         type: 'object',
         properties: {
-          leaveType: { type: 'string' },
-          allocated: { type: 'number' },
+          leaveType: {
+            type: 'string',
+            enum: ['Casual Leave', 'Sick Leave', 'Paid Leave', 'Unpaid Leave'],
+          },
+          allocated: { type: 'number', example: 12 },
           used: { type: 'number' },
           remaining: { type: 'number' },
-          isUnlimited: { type: 'boolean' },
+          isUnlimited: { type: 'boolean', enum: [false], example: false },
         },
       },
       LeaveBalance: {
@@ -984,7 +1026,10 @@ const swaggerDocument = {
         type: 'object',
         required: ['leaveType', 'fromDate', 'toDate', 'reason'],
         properties: {
-          leaveType: { type: 'string' },
+          leaveType: {
+            type: 'string',
+            enum: ['Casual Leave', 'Sick Leave', 'Paid Leave', 'Unpaid Leave'],
+          },
           fromDate: date,
           toDate: date,
           isHalfDay: { type: 'boolean', default: false },
@@ -997,7 +1042,10 @@ const swaggerDocument = {
         properties: {
           id: objectId,
           employee: { type: 'object', additionalProperties: true },
-          leaveType: { type: 'string' },
+          leaveType: {
+            type: 'string',
+            enum: ['Casual Leave', 'Sick Leave', 'Paid Leave', 'Unpaid Leave'],
+          },
           fromDate: dateTime,
           toDate: dateTime,
           isHalfDay: { type: 'boolean' },
@@ -1042,6 +1090,14 @@ const swaggerDocument = {
         type: 'object',
         properties: { id: objectId, name: { type: 'string' } },
       },
+      DeletedEmployee: {
+        type: 'object',
+        properties: {
+          id: objectId,
+          employeeId: { type: 'string', example: 'EMP0009' },
+          fullName: { type: 'string', example: 'Aarav Sharma' },
+        },
+      },
       AttendanceLog: {
         type: 'object',
         properties: {
@@ -1054,7 +1110,21 @@ const swaggerDocument = {
         type: 'object',
         properties: {
           date: dateTime,
-          status: { type: 'string', example: 'present' },
+          status: {
+            type: 'string',
+            enum: [
+              'present',
+              'absent',
+              'paid_leave',
+              'unpaid_leave',
+              'holiday',
+              'half_day',
+              'weekend',
+              'not_marked',
+              'upcoming',
+            ],
+            example: 'present',
+          },
           isScheduledWorkday: { type: 'boolean' },
           firstPunchIn: { ...dateTime, nullable: true },
           lastPunchOut: { ...dateTime, nullable: true },
@@ -1115,7 +1185,7 @@ const swaggerDocument = {
           employee: { $ref: '#/components/schemas/Employee' },
           month: { type: 'integer' },
           year: { type: 'integer' },
-          payrollMonth: { type: 'string', example: 'July 2026' },
+          payrollMonthLabel: { type: 'string', example: 'July 2026' },
           periodStart: dateTime,
           periodEnd: dateTime,
           companyName: { type: 'string', example: 'HRMS Pvt Ltd' },
@@ -1123,11 +1193,51 @@ const swaggerDocument = {
           perDaySalary: { type: 'number', example: 2272.73 },
           totalDeduction: { type: 'number', example: 2272.73 },
           netSalary: { type: 'number', example: 47727.27 },
-          slipNumber: { type: 'string', example: 'PAY-EMP0009-202607' },
-          attendanceSummary: { type: 'object', additionalProperties: { type: 'number' } },
-          deductionBreakdown: { type: 'object', additionalProperties: { type: 'number' } },
-          paidLeaveAdjustments: { type: 'array', items: { type: 'object', properties: { leaveType: { type: 'string' }, days: { type: 'number' } } } },
-          paidLeaveUsed: { type: 'number' },
+          slipNumber: { type: 'string', example: 'SLIP-202607-EMP0009' },
+          attendanceSummary: {
+            type: 'object',
+            properties: {
+              totalWorkingDays: { type: 'number', example: 22 },
+              presentDays: { type: 'number', example: 19 },
+              absentDays: { type: 'number', example: 1 },
+              approvedPaidLeaveDays: { type: 'number', example: 1 },
+              unpaidLeaveDays: { type: 'number', example: 0.5 },
+              halfDayLeaveDays: { type: 'number', example: 0.5 },
+              lateMarks: { type: 'number', example: 3 },
+              lateDeductionDays: { type: 'number', example: 0.5 },
+              paidLeaveAdjustmentUsed: { type: 'number', example: 1 },
+              salaryDeductionDays: { type: 'number', example: 1 },
+            },
+          },
+          deductionBreakdown: {
+            type: 'object',
+            properties: {
+              unpaidLeaveDays: { type: 'number', example: 0.5 },
+              absentDays: { type: 'number', example: 1 },
+              lateDeductionDays: { type: 'number', example: 0.5 },
+              halfDayLeaveDays: { type: 'number', example: 0.5 },
+              adjustableDeductionDays: { type: 'number', example: 1.5 },
+              paidLeaveAdjustmentUsed: { type: 'number', example: 1 },
+              finalSalaryDeductionDays: { type: 'number', example: 1 },
+              unpaidLeaveAmount: { type: 'number', example: 1136.36 },
+              adjustableDeductionAmount: { type: 'number', example: 2272.73 },
+            },
+          },
+          paidLeaveAdjustments: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                leaveType: {
+                  type: 'string',
+                  enum: ['Paid Leave'],
+                  example: 'Paid Leave',
+                },
+                days: { type: 'number', example: 1 },
+              },
+            },
+          },
+          paidLeaveUsed: { type: 'number', example: 2 },
           processedAt: dateTime,
         },
         additionalProperties: true,
