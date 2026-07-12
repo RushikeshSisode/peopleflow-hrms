@@ -319,7 +319,7 @@ The included `render.yaml` configures Render's free web-service plan, build, sta
 Render runs this build command from the repository root:
 
 ```bash
-npm ci --prefix server && npm ci --prefix client && npm run build --prefix client
+npm ci --prefix server && npm ci --prefix client --include=dev && npm run build --prefix client
 ```
 
 It starts the combined application with:
