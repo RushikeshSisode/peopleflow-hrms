@@ -2,7 +2,7 @@
 
 A full-stack Human Resource Management System built with the MERN stack. The application provides separate Admin and Employee workspaces for managing employees, employment types, leave policies, attendance, holidays, payroll, and downloadable salary slips.
 
-This project was developed as a production-oriented MERN interview assignment with a focus on authentication, role-based access control, business-rule implementation, database design, and maintainable frontend/backend architecture.
+
 
 ## Features
 
@@ -202,7 +202,7 @@ With the example environment values, the logins are:
 | Admin | `admin@hrms.com` | `Admin@123` |
 | Employee | `employee@hrms.com` | `Employee@123` |
 
-These credentials are only for local demonstration. Change all seeded passwords and JWT secrets before deploying publicly.
+These credentials are only for local demonstration. 
 
 ## Application URLs
 
@@ -214,7 +214,7 @@ These credentials are only for local demonstration. Change all seeded passwords 
 | Swagger UI | `http://localhost:5000/api-docs` |
 | OpenAPI JSON | `http://localhost:5000/api-docs.json` |
 
-## API Documentation
+## Swagger API Documentation
 
 Swagger UI documents all authentication, employee, employment-type, leave, holiday, attendance, payroll, and salary-slip endpoints.
 
@@ -227,7 +227,7 @@ To test a protected API:
 5. Paste only the access token and authorize.
 6. Execute endpoints permitted for that role.
 
-The browser automatically manages the HTTP-only refresh cookie when Swagger is opened from the backend URL. The raw specification at `/api-docs.json` can also be imported into Postman or other OpenAPI-compatible tools.
+
 
 ## Main API Groups
 
@@ -243,7 +243,7 @@ The browser automatically manages the HTTP-only refresh cookie when Swagger is o
 
 Refer to Swagger UI for complete request bodies, parameters, examples, responses, and authorization requirements.
 
-## Important Business Rules
+## Important Project Rules
 
 ### Attendance
 
@@ -309,46 +309,27 @@ After startup, verify the health endpoint and Swagger UI in the browser. An auto
 
 ## Deployment Notes
 
-The production deployment uses one Render Web Service. Express serves both the API and the compiled React application, which keeps authentication cookies and `/api` requests on the same origin.
 
-The included `render.yaml` configures Render's free web-service plan, build, start command, health check, Node.js version, and non-secret environment defaults.
 
-### Render
 
-1. Push the complete repository to GitHub.
-2. In Render, create a new Blueprint and select the repository.
-3. Provide the environment variables marked `sync: false` in `render.yaml`.
-4. Set `CLIENT_URL` to the final Render service URL.
-5. Set `MONGO_URI` to the MongoDB Atlas connection string.
-6. Set private `SEED_ADMIN_EMAIL` and `SEED_ADMIN_PASSWORD` values.
-7. Keep `SEED_DEMO_DATA=false` in production.
-8. Add the service's Render outbound IP ranges to the Atlas IP access list.
-9. Deploy and verify `/api/health` before testing the application.
 
-Render runs this build command from the repository root:
+## 📌 Submission Links
 
-```bash
-npm ci --prefix server && npm ci --prefix client --include=dev && npm run build --prefix client
-```
+### 🌐 Live Application
+- **URL:** https://peopleflow-hrms.onrender.com/login/admin
 
-It starts the combined application with:
+### 📖 API Documentation
+- **Swagger UI:** https://peopleflow-hrms.onrender.com/api-docs
+- **OpenAPI JSON:** https://peopleflow-hrms.onrender.com/api-docs.json
 
-```bash
-npm start --prefix server
-```
+### 👤 Admin Login Credentials
 
-Never commit `.env`, MongoDB credentials, JWT secrets, or production passwords.
+| Field | Value |
+|--------|-------|
+| Username | `admin89@gmail.com` |
+| Password | `admin891234` |
 
-### Submission Links
 
-After deployment, share:
-
-- GitHub repository URL
-- Frontend application URL
-- Backend health-check URL
-- Deployed Swagger UI URL: `https://your-backend-domain/api-docs`
-
-Do not share localhost links in the final submission because they only work on the development computer.
 
 ## Current Scope
 
@@ -362,6 +343,4 @@ Current implementation notes:
 
 Automated backend tests and email notifications are outside the current implementation.
 
-## License
 
-This project was created for an interview assignment and educational evaluation.
