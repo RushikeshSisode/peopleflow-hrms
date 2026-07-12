@@ -5,6 +5,7 @@ const {
   getEmployeeById,
   updateEmployee,
   setEmployeeStatus,
+  deleteEmployee,
   listManagers,
 } = require('../services/employee.service');
 
@@ -66,11 +67,22 @@ const listManagersHandler = asyncHandler(async (req, res) => {
   });
 });
 
+const deleteEmployeeHandler = asyncHandler(async (req, res) => {
+  const employee = await deleteEmployee(req.params.id);
+
+  res.json({
+    success: true,
+    message: 'Employee deleted successfully.',
+    data: employee,
+  });
+});
+
 module.exports = {
   createEmployeeHandler,
   listEmployeesHandler,
   getEmployeeHandler,
   updateEmployeeHandler,
   updateEmployeeStatusHandler,
+  deleteEmployeeHandler,
   listManagersHandler,
 };

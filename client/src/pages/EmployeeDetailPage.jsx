@@ -1,7 +1,8 @@
 import { useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
+  deleteEmployee,
   fetchEmployeeById,
   updateEmployeeStatus,
 } from '../features/employees/employeeSlice'
@@ -24,8 +25,9 @@ function formatCurrency(value) {
 
 function EmployeeDetailPage() {
   const dispatch = useDispatch()
+  const navigate = useNavigate()
   const { id } = useParams()
-  const { detail, detailStatus, error } = useSelector((state) => state.employees)
+  const { detail, detailStatus, deleteStatus, error } = useSelector((state) => state.employees)
 
   useEffect(() => {
     dispatch(fetchEmployeeById(id))
@@ -38,6 +40,26 @@ function EmployeeDetailPage() {
 
     const nextStatus = detail.status === 'active' ? 'inactive' : 'active'
     await dispatch(updateEmployeeStatus({ id: detail.id, status: nextStatus }))
+  }
+
+  async function handleDelete() {
+    if (!detail) {
+      return
+    }
+
+    const confirmed = window.confirm(
+      `Delete ${detail.fullName} (${detail.employeeId}) and all related attendance, leave, and payroll records?`,
+    )
+
+    if (!confirmed) {
+      return
+    }
+
+    const action = await dispatch(deleteEmployee(detail.id))
+
+    if (deleteEmployee.fulfilled.match(action)) {
+      navigate('/admin/employees', { replace: true })
+    }
   }
 
   if (detailStatus === 'loading' || !detail) {
@@ -91,6 +113,14 @@ function EmployeeDetailPage() {
               className="rounded-full bg-emerald-300 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-emerald-200"
             >
               {detail.status === 'active' ? 'Deactivate' : 'Activate'}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={deleteStatus === 'loading'}
+              className="rounded-full border border-rose-400/30 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-400/10 disabled:opacity-50"
+            >
+              {deleteStatus === 'loading' ? 'Deleting...' : 'Delete employee'}
             </button>
           </div>
         </div>

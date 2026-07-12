@@ -2,7 +2,10 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Employee = require('../models/Employee');
 const EmploymentType = require('../models/EmploymentType');
+const AttendanceLog = require('../models/AttendanceLog');
 const LeaveBalance = require('../models/LeaveBalance');
+const LeaveRequest = require('../models/LeaveRequest');
+const Payroll = require('../models/Payroll');
 const ROLES = require('../constants/roles');
 const ApiError = require('../utils/apiError');
 const { hashValue } = require('../utils/password');
@@ -476,6 +479,48 @@ async function setEmployeeStatus(employeeId, status) {
   return getEmployeeById(employee.id);
 }
 
+async function deleteEmployee(employeeId) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const employee = await Employee.findById(employeeId).populate('userId').session(session);
+
+    if (!employee) {
+      throw new ApiError(404, 'Employee not found.');
+    }
+
+    await Employee.updateMany(
+      { reportingManagerId: employee._id },
+      { $set: { reportingManagerId: null } },
+      { session },
+    );
+
+    await Promise.all([
+      AttendanceLog.deleteMany({ employeeId: employee._id }, { session }),
+      LeaveBalance.deleteMany({ employeeId: employee._id }, { session }),
+      LeaveRequest.deleteMany({ employeeId: employee._id }, { session }),
+      Payroll.deleteMany({ employeeId: employee._id }, { session }),
+    ]);
+
+    await Employee.deleteOne({ _id: employee._id }, { session });
+    await User.deleteOne({ _id: employee.userId._id }, { session });
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return {
+      id: employee._id.toString(),
+      employeeId: employee.employeeId,
+      fullName: employee.userId.fullName,
+    };
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    throw error;
+  }
+}
+
 async function listManagers() {
   const employees = await Employee.find({
     $or: [{ status: 'active' }, { status: { $exists: false } }],
@@ -497,5 +542,6 @@ module.exports = {
   getEmployeeById,
   updateEmployee,
   setEmployeeStatus,
+  deleteEmployee,
   listManagers,
 };

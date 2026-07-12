@@ -1,6 +1,7 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import {
   createEmployeeRequest,
+  deleteEmployeeRequest,
   fetchEmployeeRequest,
   fetchEmployeesRequest,
   fetchManagersRequest,
@@ -20,6 +21,7 @@ const initialState = {
   detail: null,
   detailStatus: 'idle',
   submitStatus: 'idle',
+  deleteStatus: 'idle',
   managers: [],
   managersStatus: 'idle',
   error: null,
@@ -103,6 +105,19 @@ export const fetchManagers = createAsyncThunk(
   },
 )
 
+export const deleteEmployee = createAsyncThunk(
+  'employees/deleteEmployee',
+  async (id, { rejectWithValue }) => {
+    try {
+      return await deleteEmployeeRequest(id)
+    } catch (error) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Unable to delete employee.',
+      )
+    }
+  },
+)
+
 const employeeSlice = createSlice({
   name: 'employees',
   initialState,
@@ -165,6 +180,22 @@ const employeeSlice = createSlice({
       })
       .addCase(updateEmployee.rejected, (state, action) => {
         state.submitStatus = 'failed'
+        state.error = action.payload
+      })
+      .addCase(deleteEmployee.pending, (state) => {
+        state.deleteStatus = 'loading'
+        state.error = null
+      })
+      .addCase(deleteEmployee.fulfilled, (state, action) => {
+        state.deleteStatus = 'succeeded'
+        state.items = state.items.filter((item) => item.id !== action.payload.id)
+        if (state.detail?.id === action.payload.id) {
+          state.detail = null
+          state.detailStatus = 'idle'
+        }
+      })
+      .addCase(deleteEmployee.rejected, (state, action) => {
+        state.deleteStatus = 'failed'
         state.error = action.payload
       })
       .addCase(updateEmployeeStatus.fulfilled, (state, action) => {

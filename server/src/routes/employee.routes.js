@@ -8,6 +8,7 @@ const {
   getEmployeeHandler,
   updateEmployeeHandler,
   updateEmployeeStatusHandler,
+  deleteEmployeeHandler,
   listManagersHandler,
 } = require('../controllers/employee.controller');
 
@@ -21,5 +22,6 @@ router.get('/', listEmployeesHandler);
 router.get('/:id', getEmployeeHandler);
 router.patch('/:id', updateEmployeeHandler);
 router.patch('/:id/status', updateEmployeeStatusHandler);
+router.delete('/:id', deleteEmployeeHandler);
 
 module.exports = router;

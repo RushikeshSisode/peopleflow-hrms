@@ -28,6 +28,11 @@ export async function updateEmployeeStatusRequest({ id, status }) {
   return data.data
 }
 
+export async function deleteEmployeeRequest(id) {
+  const { data } = await api.delete(`/employees/${id}`)
+  return data.data
+}
+
 export async function fetchManagersRequest() {
   const { data } = await api.get('/employees/managers')
   return data.data

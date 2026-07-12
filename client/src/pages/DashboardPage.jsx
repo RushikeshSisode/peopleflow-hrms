@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link } from 'react-router-dom'
-import { fetchMyTodayAttendance } from '../features/attendance/attendanceSlice'
+import AttendanceCalendar from '../components/common/AttendanceCalendar'
+import HolidayCalendar from '../components/common/HolidayCalendar'
+import {
+  fetchMyAttendanceCalendar,
+  fetchMyTodayAttendance,
+} from '../features/attendance/attendanceSlice'
 import { fetchDashboardByRole } from '../features/auth/authService'
 import { fetchHolidays } from '../features/holidays/holidaySlice'
 import {
@@ -9,7 +14,13 @@ import {
   fetchMyLeaveRequests,
 } from '../features/leaves/leaveSlice'
 import { useAuth } from '../hooks/useAuth'
-import { formatDuration, formatTime, getAttendanceStatusTone } from '../utils/attendance'
+import {
+  buildMonthParams,
+  formatDuration,
+  formatTime,
+  getAttendanceStatusTone,
+} from '../utils/attendance'
+import { toDateKey } from '../utils/calendar'
 
 function formatDate(value) {
   return new Date(value).toLocaleDateString('en-IN', {
@@ -31,7 +42,9 @@ function EmployeeDashboard({ panel }) {
   } = useSelector((state) => state.leaves)
   const {
     today: todayAttendance,
+    calendar: attendanceCalendar,
     todayStatus: attendanceStatus,
+    calendarStatus: attendanceCalendarStatus,
     error: attendanceError,
   } = useSelector((state) => state.attendance)
   const {
@@ -39,6 +52,8 @@ function EmployeeDashboard({ panel }) {
     listStatus: holidaysStatus,
     error: holidayError,
   } = useSelector((state) => state.holidays)
+  const [visibleMonth, setVisibleMonth] = useState(new Date())
+  const [selectedDateKey, setSelectedDateKey] = useState('')
 
   useEffect(() => {
     dispatch(fetchMyLeaveBalances())
@@ -46,6 +61,10 @@ function EmployeeDashboard({ panel }) {
     dispatch(fetchHolidays())
     dispatch(fetchMyTodayAttendance())
   }, [dispatch])
+
+  useEffect(() => {
+    dispatch(fetchMyAttendanceCalendar(buildMonthParams(visibleMonth)))
+  }, [dispatch, visibleMonth])
 
   const today = useMemo(() => {
     const date = new Date()
@@ -72,6 +91,31 @@ function EmployeeDashboard({ panel }) {
     (total, entry) => total + (entry.isUnlimited ? 0 : entry.remaining || 0),
     0,
   )
+
+  useEffect(() => {
+    if (!attendanceCalendar?.days?.length) {
+      return
+    }
+
+    const todayKey = toDateKey(new Date())
+    const monthHasToday = attendanceCalendar.days.some(
+      (day) => toDateKey(day.date) === todayKey,
+    )
+    const selectedDateStillExists = attendanceCalendar.days.some(
+      (day) => toDateKey(day.date) === selectedDateKey,
+    )
+
+    if (selectedDateStillExists) {
+      return
+    }
+
+    if (monthHasToday) {
+      setSelectedDateKey(todayKey)
+      return
+    }
+
+    setSelectedDateKey(toDateKey(attendanceCalendar.days[0].date))
+  }, [attendanceCalendar, selectedDateKey])
 
   return (
     <div className="space-y-6">
@@ -434,6 +478,75 @@ function EmployeeDashboard({ panel }) {
             </div>
           </section>
         </div>
+      </section>
+
+      <section className="space-y-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.26em] text-emerald-300">
+              Attendance Calendar
+            </p>
+            <h3 className="mt-3 text-2xl font-semibold text-white">
+              Monthly attendance view on the dashboard
+            </h3>
+          </div>
+
+          <Link
+            className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+            to="/employee/attendance"
+          >
+            Open full attendance page
+          </Link>
+        </div>
+
+        <AttendanceCalendar
+          calendar={attendanceCalendar}
+          visibleMonth={visibleMonth}
+          selectedDateKey={selectedDateKey}
+          onSelectDate={setSelectedDateKey}
+          onPreviousMonth={() =>
+            setVisibleMonth(
+              (current) => new Date(current.getFullYear(), current.getMonth() - 1, 1),
+            )
+          }
+          onNextMonth={() =>
+            setVisibleMonth(
+              (current) => new Date(current.getFullYear(), current.getMonth() + 1, 1),
+            )
+          }
+        />
+
+        {attendanceCalendarStatus === 'loading' ? (
+          <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-400">
+            Loading monthly attendance calendar...
+          </div>
+        ) : null}
+      </section>
+
+      <section className="space-y-6">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <p className="font-mono text-xs uppercase tracking-[0.26em] text-sky-300">
+              Holiday Calendar
+            </p>
+            <h3 className="mt-3 text-2xl font-semibold text-white">
+              Company holidays directly on the dashboard
+            </h3>
+          </div>
+
+          <Link
+            className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
+            to="/employee/holidays"
+          >
+            Open full holiday page
+          </Link>
+        </div>
+
+        <HolidayCalendar
+          holidays={holidays}
+          title="Holiday Calendar"
+          compact
+        />
       </section>
 
       {leaveError || holidayError || attendanceError ? (
