@@ -98,8 +98,9 @@ function AdminPayrollPage() {
           Process monthly payroll and generate salary slips
         </h2>
         <p className="mt-3 max-w-3xl text-slate-300">
-          Payroll uses attendance, leave, late-mark conversion, and paid-leave
-          adjustment before applying any salary deduction.
+          Payroll now deducts salary only for unpaid leave, absent days, late-mark
+          conversion, and unpaid half-day impact, while paid leave balances are
+          consumed first where applicable.
         </p>
       </section>
 
@@ -194,7 +195,9 @@ function AdminPayrollPage() {
           <div className="mt-3 text-3xl font-semibold text-white">
             {formatCurrency(summary.totalDeduction)}
           </div>
-          <p className="mt-2 text-sm text-slate-400">Late, absent, and unpaid leave impact</p>
+          <p className="mt-2 text-sm text-slate-400">
+            Unpaid leave, absences, late conversions, and unpaid half-days
+          </p>
         </div>
         <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
           <p className="text-xs uppercase tracking-[0.22em] text-slate-500">Net Payout</p>

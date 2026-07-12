@@ -1,11 +1,29 @@
 import { useEffect, useState } from 'react'
 
-function createEmptyRule() {
-  return {
-    leaveType: '',
-    annualDays: '',
-    isUnlimited: false,
-  }
+const FIXED_LEAVE_TYPES = [
+  { key: 'casual_leave', label: 'Casual Leave', helper: 'Short planned time off.' },
+  { key: 'sick_leave', label: 'Sick Leave', helper: 'Health-related leave balance.' },
+  { key: 'paid_leave', label: 'Paid Leave', helper: 'General paid leave used for adjustments too.' },
+  { key: 'unpaid_leave', label: 'Unpaid Leave', helper: 'Approved leave that still deducts salary.' },
+]
+
+function normalizeLeaveTypeKey(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+function buildLeaveRulesFromInitialValues(initialRules = []) {
+  const daysByType = new Map(
+    initialRules.map((rule) => [normalizeLeaveTypeKey(rule.leaveType), String(rule.annualDays ?? 0)]),
+  )
+
+  return FIXED_LEAVE_TYPES.map((type) => ({
+    leaveType: type.label,
+    annualDays: daysByType.get(type.key) || '0',
+  }))
 }
 
 function EmploymentTypeForm({
@@ -19,7 +37,7 @@ function EmploymentTypeForm({
     name: '',
     description: '',
     isActive: true,
-    leaveRules: [createEmptyRule()],
+    leaveRules: buildLeaveRulesFromInitialValues(),
   })
 
   useEffect(() => {
@@ -31,40 +49,16 @@ function EmploymentTypeForm({
       name: initialValues.name || '',
       description: initialValues.description || '',
       isActive: initialValues.isActive ?? true,
-      leaveRules:
-        initialValues.leavePolicy?.rules?.length > 0
-          ? initialValues.leavePolicy.rules.map((rule) => ({
-              leaveType: rule.leaveType,
-              annualDays: rule.isUnlimited ? '' : rule.annualDays,
-              isUnlimited: rule.isUnlimited,
-            }))
-          : [createEmptyRule()],
+      leaveRules: buildLeaveRulesFromInitialValues(initialValues.leavePolicy?.rules),
     })
   }, [initialValues])
 
-  function updateRule(index, changes) {
+  function updateRule(leaveType, annualDays) {
     setFormData((current) => ({
       ...current,
-      leaveRules: current.leaveRules.map((rule, ruleIndex) =>
-        ruleIndex === index ? { ...rule, ...changes } : rule,
+      leaveRules: current.leaveRules.map((rule) =>
+        rule.leaveType === leaveType ? { ...rule, annualDays } : rule,
       ),
-    }))
-  }
-
-  function addRule() {
-    setFormData((current) => ({
-      ...current,
-      leaveRules: [...current.leaveRules, createEmptyRule()],
-    }))
-  }
-
-  function removeRule(index) {
-    setFormData((current) => ({
-      ...current,
-      leaveRules:
-        current.leaveRules.length === 1
-          ? [createEmptyRule()]
-          : current.leaveRules.filter((_, ruleIndex) => ruleIndex !== index),
     }))
   }
 
@@ -75,13 +69,11 @@ function EmploymentTypeForm({
       name: formData.name,
       description: formData.description,
       isActive: formData.isActive,
-      leaveRules: formData.leaveRules
-        .filter((rule) => rule.leaveType.trim())
-        .map((rule) => ({
-          leaveType: rule.leaveType,
-          annualDays: rule.isUnlimited ? 0 : Number(rule.annualDays || 0),
-          isUnlimited: rule.isUnlimited,
-        })),
+      leaveRules: formData.leaveRules.map((rule) => ({
+        leaveType: rule.leaveType,
+        annualDays: Number(rule.annualDays || 0),
+        isUnlimited: false,
+      })),
     })
   }
 
@@ -145,73 +137,35 @@ function EmploymentTypeForm({
       </div>
 
       <div className="mt-10">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-white">Leave Policy</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              Define the leave rules employees inherit from this employment type.
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={addRule}
-            className="rounded-full border border-white/15 px-4 py-2 text-sm font-semibold text-white transition hover:bg-white/10"
-          >
-            Add leave rule
-          </button>
+        <div>
+          <h3 className="text-lg font-semibold text-white">Leave Policy</h3>
+          <p className="mt-1 text-sm text-slate-400">
+            Every employment type uses the same four leave types. Admin can only assign annual days.
+          </p>
         </div>
 
-        <div className="mt-6 space-y-4">
-          {formData.leaveRules.map((rule, index) => (
-            <div
-              key={`leave-rule-${index}`}
-              className="grid gap-4 rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-5 md:grid-cols-[1.2fr_0.8fr_0.8fr_auto]"
-            >
-              <input
-                className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-emerald-300"
-                placeholder="Leave type"
-                value={rule.leaveType}
-                onChange={(event) =>
-                  updateRule(index, { leaveType: event.target.value })
-                }
-              />
+        <div className="mt-6 grid gap-4 md:grid-cols-2">
+          {FIXED_LEAVE_TYPES.map((type) => {
+            const currentRule = formData.leaveRules.find((rule) => rule.leaveType === type.label)
 
-              <input
-                className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-emerald-300 disabled:opacity-50"
-                type="number"
-                min="0"
-                placeholder="Annual days"
-                disabled={rule.isUnlimited}
-                value={rule.annualDays}
-                onChange={(event) =>
-                  updateRule(index, { annualDays: event.target.value })
-                }
-              />
-
-              <label className="flex items-center justify-center gap-3 rounded-2xl border border-white/10 px-4 py-3 text-sm text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={rule.isUnlimited}
-                  onChange={(event) =>
-                    updateRule(index, {
-                      isUnlimited: event.target.checked,
-                      annualDays: event.target.checked ? '' : rule.annualDays,
-                    })
-                  }
-                />
-                Unlimited
-              </label>
-
-              <button
-                type="button"
-                onClick={() => removeRule(index)}
-                className="rounded-full border border-rose-400/30 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-400/10"
+            return (
+              <label
+                key={type.key}
+                className="rounded-[1.5rem] border border-white/10 bg-slate-950/60 p-5"
               >
-                Remove
-              </button>
-            </div>
-          ))}
+                <span className="block text-base font-semibold text-white">{type.label}</span>
+                <span className="mt-1 block text-sm text-slate-400">{type.helper}</span>
+                <input
+                  className="mt-4 w-full rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-white outline-none focus:border-emerald-300"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={currentRule?.annualDays || '0'}
+                  onChange={(event) => updateRule(type.label, event.target.value)}
+                />
+              </label>
+            )
+          })}
         </div>
       </div>
 

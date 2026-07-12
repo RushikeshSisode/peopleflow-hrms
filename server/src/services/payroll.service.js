@@ -1,8 +1,11 @@
 const Employee = require('../models/Employee');
-const LeaveBalance = require('../models/LeaveBalance');
 const Payroll = require('../models/Payroll');
 const ApiError = require('../utils/apiError');
-const { initializeLeaveBalanceForEmployee } = require('./leave.service');
+const {
+  getLeaveTypeDefinition,
+  isUnpaidLeaveType,
+} = require('../constants/leaveTypes');
+const { syncLeaveBalanceForEmployee } = require('./leave.service');
 const { getAttendanceSummariesByEmployee } = require('./attendance.service');
 const { createPayslipPdf } = require('../utils/payrollPdf');
 
@@ -83,12 +86,7 @@ function getRangeForEmployee(employee, periodStart, periodEnd) {
 
 function getPaidLeaveEntries(balanceRecord) {
   return balanceRecord.balances
-    .filter((entry) => !entry.isUnlimited && !entry.leaveType.toLowerCase().includes('unpaid'))
-    .sort((left, right) => {
-      const leftPriority = left.leaveType.toLowerCase().includes('paid') ? 0 : 1;
-      const rightPriority = right.leaveType.toLowerCase().includes('paid') ? 0 : 1;
-      return leftPriority - rightPriority;
-    });
+    .filter((entry) => getLeaveTypeDefinition(entry.leaveType)?.key === 'paid_leave');
 }
 
 function getAvailablePaidLeave(balanceRecord) {
@@ -101,7 +99,9 @@ function getAvailablePaidLeave(balanceRecord) {
 function restorePayrollAdjustments(balanceRecord, adjustments) {
   adjustments.forEach((adjustment) => {
     const entry = balanceRecord.balances.find(
-      (balance) => balance.leaveType.toLowerCase() === adjustment.leaveType.toLowerCase(),
+      (balance) =>
+        getLeaveTypeDefinition(balance.leaveType)?.key ===
+        getLeaveTypeDefinition(adjustment.leaveType)?.key,
     );
 
     if (!entry || entry.isUnlimited) {
@@ -148,6 +148,7 @@ function buildPayrollSnapshot(employee, summaries, balanceRecord, month, year) {
     absentDays: 0,
     approvedPaidLeaveDays: 0,
     unpaidLeaveDays: 0,
+    halfDayLeaveDays: 0,
     lateMarks: 0,
     lateDeductionDays: 0,
     paidLeaveAdjustmentUsed: 0,
@@ -177,15 +178,15 @@ function buildPayrollSnapshot(employee, summaries, balanceRecord, month, year) {
         attendanceSummary.unpaidLeaveDays += 1;
         break;
       case 'half_day': {
-        const isUnpaidHalfDay = summary.leave?.leaveType
-          ?.toLowerCase()
-          .includes('unpaid');
+        const isUnpaidHalfDay = isUnpaidLeaveType(summary.leave?.leaveType);
 
         if (isUnpaidHalfDay) {
           attendanceSummary.unpaidLeaveDays += 0.5;
         } else {
           attendanceSummary.approvedPaidLeaveDays += 0.5;
         }
+
+        attendanceSummary.halfDayLeaveDays += 0.5;
         break;
       }
       default:
@@ -241,6 +242,7 @@ function buildPayrollSnapshot(employee, summaries, balanceRecord, month, year) {
       unpaidLeaveDays: attendanceSummary.unpaidLeaveDays,
       absentDays: attendanceSummary.absentDays,
       lateDeductionDays: attendanceSummary.lateDeductionDays,
+      halfDayLeaveDays: attendanceSummary.halfDayLeaveDays,
       adjustableDeductionDays,
       paidLeaveAdjustmentUsed,
       finalSalaryDeductionDays,
@@ -331,18 +333,11 @@ async function runPayroll(payload, processedBy) {
         return date >= rangeStart && date <= rangeEnd;
       });
 
-    let balanceRecord = await LeaveBalance.findOne({
-      employeeId: employee.id,
+    let balanceRecord = await syncLeaveBalanceForEmployee(
+      employee.id,
+      employee.employmentType,
       year,
-    });
-
-    if (!balanceRecord) {
-      balanceRecord = await initializeLeaveBalanceForEmployee(
-        employee.id,
-        employee.employmentType,
-        year,
-      );
-    }
+    );
 
     const existingPayroll = existingMap.get(employee.id.toString());
 

@@ -3,6 +3,7 @@ const Employee = require('../models/Employee');
 const Holiday = require('../models/Holiday');
 const LeaveRequest = require('../models/LeaveRequest');
 const ApiError = require('../utils/apiError');
+const { isUnpaidLeaveType } = require('../constants/leaveTypes');
 
 const OFFICE_START_HOUR = 9;
 const OFFICE_START_MINUTE = 30;
@@ -79,7 +80,7 @@ function serializeHoliday(holiday) {
 }
 
 function classifyLeaveType(leaveType) {
-  return leaveType.toLowerCase().includes('unpaid') ? 'unpaid_leave' : 'paid_leave';
+  return isUnpaidLeaveType(leaveType) ? 'unpaid_leave' : 'paid_leave';
 }
 
 function serializeLeaveForDay(leaveRequest) {

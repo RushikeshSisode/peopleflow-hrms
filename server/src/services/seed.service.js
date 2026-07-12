@@ -18,6 +18,7 @@ const defaultEmploymentTypes = [
       { leaveType: 'Casual Leave', annualDays: 12, isUnlimited: false },
       { leaveType: 'Sick Leave', annualDays: 12, isUnlimited: false },
       { leaveType: 'Paid Leave', annualDays: 18, isUnlimited: false },
+      { leaveType: 'Unpaid Leave', annualDays: 0, isUnlimited: false },
     ],
   },
   {
@@ -26,8 +27,10 @@ const defaultEmploymentTypes = [
     description: 'Internship employees with reduced leave allowance.',
     isActive: true,
     leaveRules: [
+      { leaveType: 'Casual Leave', annualDays: 4, isUnlimited: false },
       { leaveType: 'Sick Leave', annualDays: 6, isUnlimited: false },
       { leaveType: 'Paid Leave', annualDays: 0, isUnlimited: false },
+      { leaveType: 'Unpaid Leave', annualDays: 0, isUnlimited: false },
     ],
   },
   {
@@ -36,8 +39,10 @@ const defaultEmploymentTypes = [
     description: 'Contract workers with limited paid leave.',
     isActive: true,
     leaveRules: [
+      { leaveType: 'Casual Leave', annualDays: 2, isUnlimited: false },
+      { leaveType: 'Sick Leave', annualDays: 4, isUnlimited: false },
       { leaveType: 'Paid Leave', annualDays: 6, isUnlimited: false },
-      { leaveType: 'Unpaid Leave', annualDays: 0, isUnlimited: true },
+      { leaveType: 'Unpaid Leave', annualDays: 0, isUnlimited: false },
     ],
   },
 ];

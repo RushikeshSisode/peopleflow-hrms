@@ -1,6 +1,12 @@
 const mongoose = require('mongoose');
+const Employee = require('../models/Employee');
 const EmploymentType = require('../models/EmploymentType');
 const LeavePolicy = require('../models/LeavePolicy');
+const LeaveBalance = require('../models/LeaveBalance');
+const {
+  FIXED_LEAVE_TYPES,
+  getLeaveTypeDefinition,
+} = require('../constants/leaveTypes');
 const ApiError = require('../utils/apiError');
 
 function slugifyEmploymentType(value) {
@@ -12,40 +18,69 @@ function slugifyEmploymentType(value) {
 }
 
 function normalizeLeaveRules(rules = []) {
-  if (!Array.isArray(rules) || rules.length === 0) {
-    return [];
+  const seenTypes = new Set();
+  const assignedDays = new Map();
+
+  if (!Array.isArray(rules)) {
+    throw new ApiError(400, 'Leave rules must be provided as a list.');
   }
 
-  const seenTypes = new Set();
+  rules.forEach((rule) => {
+    const definition = getLeaveTypeDefinition(rule.leaveType);
 
-  return rules.map((rule) => {
-    const leaveType = rule.leaveType?.trim();
-
-    if (!leaveType) {
-      throw new ApiError(400, 'Each leave rule must include a leave type.');
+    if (!definition) {
+      throw new ApiError(
+        400,
+        'Only Casual Leave, Sick Leave, Paid Leave, and Unpaid Leave are allowed.',
+      );
     }
 
-    const normalizedKey = leaveType.toLowerCase();
-
-    if (seenTypes.has(normalizedKey)) {
+    if (seenTypes.has(definition.key)) {
       throw new ApiError(400, 'Duplicate leave types are not allowed in one policy.');
     }
 
-    seenTypes.add(normalizedKey);
+    seenTypes.add(definition.key);
 
-    const isUnlimited = Boolean(rule.isUnlimited);
-    const annualDays = isUnlimited ? 0 : Number(rule.annualDays || 0);
+    const annualDays = Number(rule.annualDays ?? 0);
 
-    if (!isUnlimited && Number.isNaN(annualDays)) {
+    if (Number.isNaN(annualDays) || annualDays < 0) {
       throw new ApiError(400, 'Annual days must be a valid number.');
     }
 
-    return {
-      leaveType,
-      annualDays,
-      isUnlimited,
-    };
+    assignedDays.set(definition.key, annualDays);
   });
+
+  return FIXED_LEAVE_TYPES.map((type) => ({
+    leaveType: type.label,
+    annualDays: assignedDays.get(type.key) ?? 0,
+    isUnlimited: false,
+  }));
+}
+
+function coerceStoredLeaveRules(rules = []) {
+  const assignedDays = new Map();
+
+  if (Array.isArray(rules)) {
+    rules.forEach((rule) => {
+      const definition = getLeaveTypeDefinition(rule.leaveType);
+
+      if (!definition || assignedDays.has(definition.key)) {
+        return;
+      }
+
+      const annualDays = Number(rule.annualDays ?? 0);
+      assignedDays.set(
+        definition.key,
+        Number.isNaN(annualDays) || annualDays < 0 ? 0 : annualDays,
+      );
+    });
+  }
+
+  return FIXED_LEAVE_TYPES.map((type) => ({
+    leaveType: type.label,
+    annualDays: assignedDays.get(type.key) ?? 0,
+    isUnlimited: false,
+  }));
 }
 
 function getRecordId(record) {
@@ -62,10 +97,10 @@ function serializePolicy(policy) {
 
   return {
     id: getRecordId(policy),
-    rules: policy.rules.map((rule) => ({
+    rules: coerceStoredLeaveRules(policy.rules).map((rule) => ({
       leaveType: rule.leaveType,
       annualDays: rule.annualDays,
-      isUnlimited: rule.isUnlimited,
+      isUnlimited: false,
     })),
     createdAt: policy.createdAt,
     updatedAt: policy.updatedAt,
@@ -280,6 +315,19 @@ async function updateLeavePolicy(id, leaveRules) {
       upsert: true,
     },
   );
+
+  const employees = await Employee.find({ employmentType: type.code }).select('_id');
+  const currentYear = new Date().getFullYear();
+  const { syncLeaveBalanceForEmployee } = require('./leave.service');
+
+  for (const employee of employees) {
+    const existingYears = await LeaveBalance.find({ employeeId: employee.id }).distinct('year');
+    const yearsToSync = Array.from(new Set([...existingYears, currentYear]));
+
+    for (const year of yearsToSync) {
+      await syncLeaveBalanceForEmployee(employee.id, type.code, year);
+    }
+  }
 
   return serializeEmploymentType(type, policy);
 }

@@ -1,8 +1,10 @@
 const LeaveBalance = require('../models/LeaveBalance');
 const LeaveRequest = require('../models/LeaveRequest');
 const Employee = require('../models/Employee');
-const User = require('../models/User');
 const ApiError = require('../utils/apiError');
+const {
+  getLeaveTypeDefinition,
+} = require('../constants/leaveTypes');
 const { getLeavePolicyByEmploymentCode } = require('./employmentType.service');
 
 function startOfDay(dateValue) {
@@ -84,16 +86,16 @@ function serializeLeaveRequest(record) {
 async function buildBalanceEntriesFromEmploymentType(employmentTypeCode) {
   const policyBundle = await getLeavePolicyByEmploymentCode(employmentTypeCode);
 
-  if (!policyBundle) {
+  if (!policyBundle?.employmentType || !policyBundle.leavePolicy.rules.length) {
     throw new ApiError(400, 'No leave policy found for the selected employment type.');
   }
 
   return policyBundle.leavePolicy.rules.map((rule) => ({
     leaveType: rule.leaveType,
-    allocated: rule.isUnlimited ? 0 : rule.annualDays,
+    allocated: rule.annualDays,
     used: 0,
-    remaining: rule.isUnlimited ? 0 : rule.annualDays,
-    isUnlimited: rule.isUnlimited,
+    remaining: rule.annualDays,
+    isUnlimited: false,
   }));
 }
 
@@ -113,6 +115,22 @@ async function initializeLeaveBalanceForEmployee(employeeId, employmentTypeCode,
   });
 }
 
+function buildCurrentBalanceEntryMap(balanceRecord) {
+  return new Map(
+    balanceRecord.balances
+      .map((entry) => {
+        const definition = getLeaveTypeDefinition(entry.leaveType);
+
+        if (!definition) {
+          return null;
+        }
+
+        return [definition.key, entry];
+      })
+      .filter(Boolean),
+  );
+}
+
 async function syncLeaveBalanceForEmployee(employeeId, employmentTypeCode, year) {
   const nextEntries = await buildBalanceEntriesFromEmploymentType(employmentTypeCode);
   const existing = await LeaveBalance.findOne({ employeeId, year });
@@ -125,30 +143,21 @@ async function syncLeaveBalanceForEmployee(employeeId, employmentTypeCode, year)
     });
   }
 
-  const currentByType = new Map(
-    existing.balances.map((entry) => [entry.leaveType.toLowerCase(), entry]),
-  );
+  const currentByType = buildCurrentBalanceEntryMap(existing);
 
   existing.balances = nextEntries.map((entry) => {
-    const current = currentByType.get(entry.leaveType.toLowerCase());
+    const definition = getLeaveTypeDefinition(entry.leaveType);
+    const current = definition ? currentByType.get(definition.key) : null;
 
     if (!current) {
       return entry;
-    }
-
-    if (entry.isUnlimited) {
-      return {
-        ...entry,
-        used: current.used,
-        remaining: 0,
-      };
     }
 
     const remaining = Math.max(entry.allocated - current.used, 0);
 
     return {
       ...entry,
-      used: Math.min(current.used, entry.allocated),
+      used: current.used,
       remaining,
     };
   });
@@ -174,7 +183,7 @@ async function getLeaveBalancesForEmployee(employeeId, year = new Date().getFull
     throw new ApiError(404, 'Employee not found.');
   }
 
-  const balanceRecord = await initializeLeaveBalanceForEmployee(
+  const balanceRecord = await syncLeaveBalanceForEmployee(
     employee.id,
     employee.employmentType,
     year,
@@ -210,19 +219,28 @@ async function applyLeaveRequest(userId, payload) {
   const end = startOfDay(toDate);
   const totalDays = calculateLeaveDays(start, end, Boolean(isHalfDay));
   const year = start.getFullYear();
+  const leaveTypeDefinition = getLeaveTypeDefinition(leaveType);
 
   if (year !== end.getFullYear()) {
     throw new ApiError(400, 'Please apply leave within a single calendar year.');
   }
 
-  const balanceRecord = await initializeLeaveBalanceForEmployee(
+  if (!leaveTypeDefinition) {
+    throw new ApiError(
+      400,
+      'Only Casual Leave, Sick Leave, Paid Leave, and Unpaid Leave are available.',
+    );
+  }
+
+  const balanceRecord = await syncLeaveBalanceForEmployee(
     employee.id,
     employee.employmentType,
     year,
   );
 
   const balanceEntry = balanceRecord.balances.find(
-    (entry) => entry.leaveType.toLowerCase() === leaveType.trim().toLowerCase(),
+    (entry) =>
+      getLeaveTypeDefinition(entry.leaveType)?.key === leaveTypeDefinition.key,
   );
 
   if (!balanceEntry) {
@@ -246,7 +264,7 @@ async function applyLeaveRequest(userId, payload) {
 
   const leaveRequest = await LeaveRequest.create({
     employeeId: employee.id,
-    leaveType: leaveType.trim(),
+    leaveType: leaveTypeDefinition.label,
     fromDate: start,
     toDate: end,
     isHalfDay: Boolean(isHalfDay),
@@ -316,14 +334,15 @@ async function listAllLeaveRequests(query) {
 async function updateLeaveBalanceOnApproval(request) {
   const year = new Date(request.fromDate).getFullYear();
   const employee = await Employee.findById(request.employeeId);
-  const balanceRecord = await initializeLeaveBalanceForEmployee(
+  const balanceRecord = await syncLeaveBalanceForEmployee(
     request.employeeId,
     employee.employmentType,
     year,
   );
+  const leaveTypeDefinition = getLeaveTypeDefinition(request.leaveType);
 
   const balanceEntry = balanceRecord.balances.find(
-    (entry) => entry.leaveType.toLowerCase() === request.leaveType.toLowerCase(),
+    (entry) => getLeaveTypeDefinition(entry.leaveType)?.key === leaveTypeDefinition?.key,
   );
 
   if (!balanceEntry) {

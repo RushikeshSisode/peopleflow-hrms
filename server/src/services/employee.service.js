@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const User = require('../models/User');
 const Employee = require('../models/Employee');
 const EmploymentType = require('../models/EmploymentType');
+const LeaveBalance = require('../models/LeaveBalance');
 const ROLES = require('../constants/roles');
 const ApiError = require('../utils/apiError');
 const { hashValue } = require('../utils/password');
@@ -440,10 +441,15 @@ async function updateEmployee(employeeId, payload) {
   await employee.save();
 
   if (employmentType && previousEmploymentType !== employee.employmentType) {
-    await syncLeaveBalanceForEmployee(
-      employee.id,
-      employee.employmentType,
-      new Date(employee.dateOfJoining).getFullYear(),
+    const existingBalanceYears = await LeaveBalance.find({ employeeId: employee.id })
+      .distinct('year');
+    const currentYear = new Date().getFullYear();
+    const yearsToSync = Array.from(new Set([...existingBalanceYears, currentYear]));
+
+    await Promise.all(
+      yearsToSync.map((year) =>
+        syncLeaveBalanceForEmployee(employee.id, employee.employmentType, year),
+      ),
     );
   }
 
