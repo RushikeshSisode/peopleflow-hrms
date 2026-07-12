@@ -9,9 +9,9 @@ This project was developed as a production-oriented MERN interview assignment wi
 ### Admin
 
 - Secure admin login and role-protected routes
-- Create, view, search, filter, update, activate, and deactivate employees
+- Create, view, search, filter, update, activate, deactivate, and delete employees
 - Auto-generate employee IDs and assign reporting managers
-- Create employment types and configure their leave policies
+- Create employment types and configure their leave policies using fixed leave buckets
 - Review employee leave balances and approve or reject leave requests
 - Create, update, list, and delete annual holidays
 - Review attendance by employee, month, or custom date range
@@ -22,13 +22,13 @@ This project was developed as a production-oriented MERN interview assignment wi
 ### Employee
 
 - Secure employee login with automatic session refresh
-- View a personalized HRMS dashboard
+- View a personalized HRMS dashboard with leave, attendance, and holiday widgets
 - Punch in and punch out multiple times per day
-- View working hours, break duration, attendance history, and monthly calendar
+- View working hours, break duration, attendance history, and a monthly attendance calendar
 - Apply for full-day, half-day, or multi-day leave
 - View leave balances and request status
-- View holidays in a calendar
-- View payroll history and download salary slips
+- View holidays in a calendar, including a dashboard holiday calendar
+- View payroll history, open salary slips in the browser, and download salary slips
 
 ### Security
 
@@ -106,12 +106,12 @@ HRMS/
 
 Install or create the following before running the project:
 
-- Node.js 20.19 or later
+- Node.js 22.22.0 or later
 - npm
 - MongoDB Atlas cluster or a local MongoDB instance
 - A modern web browser
 
-For MongoDB Atlas, create a database user and allow your current IP address through **Network Access**. Your deployed backend's outbound IP must also be allowed.
+For MongoDB Atlas, create a database user and allow your current IP address through **Network Access**. Your deployed backend's outbound IP ranges must also be allowed.
 
 ## Local Setup
 
@@ -189,7 +189,10 @@ On backend startup, the application creates or updates:
 - Admin and employee demo accounts from the environment variables
 - A demo employee profile
 - Full Time, Intern, and Contractual employment types
-- Default leave policies for those employment types
+- Default leave policies for those employment types using four fixed leave buckets:
+  Full Time = Casual 12, Sick 12, Paid 18, Unpaid 0
+  Intern = Casual 4, Sick 6, Paid 0, Unpaid 0
+  Contractual = Casual 2, Sick 4, Paid 6, Unpaid 0
 - Republic Day, Independence Day, Diwali, and Christmas holidays for 2026
 
 With the example environment values, the logins are:
@@ -254,18 +257,22 @@ Refer to Swagger UI for complete request bodies, parameters, examples, responses
 ### Leave
 
 - Leave balances are inherited from the employee's employment-type policy.
+- Every employment type uses the same four leave buckets: `Casual Leave`, `Sick Leave`, `Paid Leave`, and `Unpaid Leave`.
+- Admins only configure annual day counts for those four buckets.
 - Approved requests update the relevant leave balance.
 - Full-day, half-day, and multi-day requests are supported.
 - Requests follow `pending`, `approved`, or `rejected` status.
+- Employees can currently apply for leave for past, current, or future dates, as long as the request stays within one calendar year and does not overlap another pending or approved request.
 
 ### Payroll
 
 - Per-day salary is `monthly salary / working days` for the selected payroll period.
 - Every three late marks produce a `0.5` day deduction.
-- Unpaid leave is deducted directly.
-- Available paid-leave balance is automatically used against absence and late-deduction days before salary deduction.
+- Salary deduction comes from unpaid leave, absent days, late-mark conversion, and unpaid half-days.
+- Approved paid half-days consume `0.5` leave without salary deduction.
+- Available `Paid Leave` balance is automatically used against absence and late-deduction days before salary deduction.
 - Re-running payroll for the same employee, month, and year updates the existing payroll record.
-- Salary slips are generated as PDFs with company, employee, payroll, earnings, deductions, and net-pay details.
+- Salary slips are generated as PDFs with company name, employee details, payroll month, gross salary, deductions, and net salary.
 
 ## Database Collections
 
@@ -278,6 +285,8 @@ Refer to Swagger UI for complete request bodies, parameters, examples, responses
 - `attendancelogs`
 - `holidays`
 - `payrolls`
+
+Salary slips are generated from payroll records and are not stored in a separate database collection.
 
 ## Verification Commands
 
@@ -343,7 +352,15 @@ Do not share localhost links in the final submission because they only work on t
 
 ## Current Scope
 
-The project covers the HRMS assignment's required authentication, employee management, employment types and leave policies, leave management, holidays, attendance, payroll, PDF salary slips, and Swagger documentation. Automated tests and email notifications are outside the current implementation.
+The project covers the HRMS assignment's required authentication, employee management, employment types and leave policies, leave management, holidays, attendance, payroll, PDF salary slips, deployment, and Swagger documentation.
+
+Current implementation notes:
+
+- Employee delete removes the employee profile, linked user account, attendance logs, leave balances, leave requests, payroll records, and clears any subordinate reporting-manager references.
+- The employee dashboard includes both the monthly attendance calendar and the holiday calendar in addition to the dedicated `/employee/attendance` and `/employee/holidays` pages.
+- Payroll currently uses only the `Paid Leave` bucket for automatic absence and late-mark adjustment.
+
+Automated backend tests and email notifications are outside the current implementation.
 
 ## License
 
